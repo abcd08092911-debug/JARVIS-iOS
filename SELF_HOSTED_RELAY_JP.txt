@@ -7,6 +7,13 @@ Tailscale、専用VPNアプリ、特定企業の中継サービスは必要あ�
 構成:
   子機ブラウザ → JARVIS relay_server.py ← relay_client.py ← SC-56B親機
 
+SC-56Bを中継サーバーにもする場合:
+  export JARVIS_RELAY_TOKEN='長いランダム文字列'
+  export JARVIS_RELAY_ROOM='自分で決めた接続コード'
+  bash android/START_JARVIS_RELAY_ANDROID.sh
+
+この起動方法では、SC-56B上でJARVIS本体、独自中継サーバー、中継クライアントを同時に動かします。子機はSC-56Bの外部到達可能なアドレスの9000番ポートへアクセスします。
+
 中継サーバーをPCまたは自分のサーバーで起動:
   export JARVIS_RELAY_TOKEN='長いランダム文字列'
   uvicorn relay_server:app --host 0.0.0.0 --port 9000
@@ -28,3 +35,5 @@ SC-56B側:
 - 中継サーバーが停止しても、USBから別のPCへコピーして再起動できます。
 - インターネット越しには、サーバーを外部から到達可能にする回線、固定アドレスまたはDNS、HTTPS証明書のいずれかが必要です。
 - 外部サービスを一切使わず、自宅回線も公開しない場合、インターネット越しの接続自体はできません。
+- 携帯回線はキャリアのCGNATで外部からの着信ができないことがあります。その場合はSC-56Bを中継サーバーにしても、外部子機から直接到達できません。
+- 自宅Wi-Fi経由なら、ルーターのポート転送、固定アドレスまたはDDNS、HTTPSを用意してください。

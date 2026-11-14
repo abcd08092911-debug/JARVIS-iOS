@@ -9,9 +9,9 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project
-        run: xcodegen generate --spec ios/project.yml
+        run: cd ios && xcodegen generate --spec project.yml
       - name: Build unsigned app
-        run: xcodebuild -project JARVIS.xcodeproj -scheme JARVIS -sdk iphoneos -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+        run: xcodebuild -project ios/JARVIS.xcodeproj -scheme JARVIS -sdk iphoneos -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
       - name: Package IPA
         run: mkdir -p Payload && cp -R build/Build/Products/Release-iphoneos/JARVIS.app Payload/ && zip -qry JARVIS.ipa Payload
       - uses: actions/upload-artifact@v4

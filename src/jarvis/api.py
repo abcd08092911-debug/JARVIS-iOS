@@ -8,7 +8,9 @@ from .config import API_TOKEN, BIND_HOST, MODEL_PATH, MAX_CONTEXT_MESSAGES
 from .llm import LocalLLM
 from .tools import create_timer, search_files
 from .capabilities import capabilities, write_file, list_connectors, save_connector
+from . import backup_manager
 app=FastAPI(title='JARVIS Local Core',version='0.2.0'); db.initialize(); llm=LocalLLM()
+backup_manager.start()
 class TextInput(BaseModel): text:str=Field(min_length=1,max_length=4000)
 class TimerInput(BaseModel): label:str=Field(min_length=1,max_length=200); seconds:int=Field(gt=0,le=31536000)
 class FileSearchInput(BaseModel): root:str; query:str=Field(min_length=1,max_length=200)
@@ -50,6 +52,17 @@ def memory_create(body:MemoryInput,x_jarvis_token:str|None=Header(default=None))
 def timer(body:TimerInput,x_jarvis_token:str|None=Header(default=None)): auth(x_jarvis_token); return create_timer(body.label,body.seconds)
 @app.get('/timers')
 def timers(x_jarvis_token:str|None=Header(default=None)): auth(x_jarvis_token); return {'timers':db.list_timers()}
+@app.get('/backup/status')
+def backup_status(x_jarvis_token:str|None=Header(default=None)):
+    auth(x_jarvis_token); return backup_manager.status()
+@app.post('/backup/save-to-usb')
+def backup_save_to_usb(x_jarvis_token:str|None=Header(default=None)):
+    auth(x_jarvis_token)
+    try: return backup_manager.save_to_usb_and_remove_local()
+    except RuntimeError as e: raise HTTPException(400,str(e))
+@app.post('/backup/dismiss-usb')
+def backup_dismiss_usb(x_jarvis_token:str|None=Header(default=None)):
+    auth(x_jarvis_token); return backup_manager.dismiss_usb_prompt()
 @app.post('/files/search')
 def files(body:FileSearchInput,x_jarvis_token:str|None=Header(default=None)):
     auth(x_jarvis_token)

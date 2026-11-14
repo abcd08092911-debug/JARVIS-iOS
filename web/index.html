@@ -4,6 +4,7 @@
 <style>body{font-family:system-ui;max-width:760px;margin:1.5rem auto;padding:0 1rem;background:#10151c;color:#eef}textarea,input,button,select{font:inherit;padding:.65rem;margin:.25rem 0}textarea{width:100%;height:90px;box-sizing:border-box}button{cursor:pointer}#log{white-space:pre-wrap;background:#18222d;padding:1rem;min-height:180px;border-radius:8px}.row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}.panel{background:#18222d;padding:.6rem;border-radius:8px;margin:.6rem 0}label{display:flex;gap:.3rem;align-items:center}</style>
 <h1>JARVIS</h1><p>ローカル優先・執事AI</p>
 <div class="panel row"><label>入力<select id="inputMode"><option value="text">文字</option><option value="voice">音声</option></select></label><label>出力<select id="outputMode"><option value="text">文字</option><option value="voice">音声</option></select></label><button id="listen" onclick="listen()" hidden>音声入力開始</button></div>
+<div id="usbPanel" class="panel" hidden><strong>USBを検出しました。</strong><p>端末内の暗号化バックアップをUSBへ保存し、保存確認後に端末側を削除しますか？</p><button onclick="saveUsb()">USBへ保存して端末側を削除</button> <button onclick="dismissUsb()">今回は保存しない</button><div id="usbResult"></div></div>
 <input id="token" type="password" placeholder="LAN接続時のAPIトークン"><div id="log"></div>
 <textarea id="q" placeholder="JARVISへの指示"></textarea><button onclick="send()">送信</button>
 <script>
@@ -14,4 +15,10 @@ inputMode.onchange=()=>{const v=inputMode.value==='voice';listenButton.hidden=!v
 function listen(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){add('JARVIS: このブラウザは音声入力に対応していません。');return}const r=new R();r.lang='ja-JP';r.interimResults=false;r.onstart=()=>listenButton.textContent='聞き取り中…';r.onresult=e=>{q.value=e.results[0][0].transcript;listenButton.textContent='音声入力開始';send()};r.onerror=()=>listenButton.textContent='音声入力開始';r.onend=()=>listenButton.textContent='音声入力開始';r.start()}
 function speak(text){if('speechSynthesis'in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='ja-JP';u.rate=.95;speechSynthesis.speak(u)}}
 async function send(){const text=q.value.trim();if(!text)return;q.value='';add('あなた: '+text);const h={'Content-Type':'application/json'};const t=document.querySelector('#token').value;if(t)h['X-JARVIS-Token']=t;try{const r=await fetch('/chat',{method:'POST',headers:h,body:JSON.stringify({text})});const j=await r.json();const reply=j.reply||j.message||JSON.stringify(j);add('JARVIS: '+reply);if(outputMode.value==='voice')speak(reply)}catch(e){add('JARVIS: 通信に失敗しました。'+e.message)}}
+const usbPanel=document.querySelector('#usbPanel'), usbResult=document.querySelector('#usbResult');
+function authHeaders(){const h={};const t=document.querySelector('#token').value;if(t)h['X-JARVIS-Token']=t;return h}
+async function checkBackup(){try{const r=await fetch('/backup/status',{headers:authHeaders()});if(!r.ok)return;const j=await r.json();usbPanel.hidden=!j.usb_detected;if(j.usb_detected)usbResult.textContent='検出先: '+j.usb_path}catch(e){}}
+async function saveUsb(){usbResult.textContent='USBへ保存して検証中…';const r=await fetch('/backup/save-to-usb',{method:'POST',headers:authHeaders()});const j=await r.json();usbResult.textContent=j.saved_to?'保存完了。端末側のバックアップを削除しました。':'失敗: '+(j.detail||'不明なエラー');if(j.saved_to)usbPanel.hidden=true}
+async function dismissUsb(){await fetch('/backup/dismiss-usb',{method:'POST',headers:authHeaders()});usbPanel.hidden=true}
+setInterval(checkBackup,5000);checkBackup();
 </script>

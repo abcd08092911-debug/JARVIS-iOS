@@ -25,9 +25,9 @@ JARVISを停止した後、TermuxでJARVISフォルダへ移動します。
 バックアップ先の例:
 
   mkdir -p ~/storage/shared/JARVIS_BACKUP
-  python scripts/backup.py backup ~/storage/shared/JARVIS_BACKUP/jarvis-2026-11-14.enc --password '自分だけの長いパスワード'
+  python scripts/backup.py backup ~/storage/shared/JARVIS_BACKUP/jarvis-2026-11-14.enc
 
-実際のパスワードは、この説明書やUSBへ書かないでください。
+既定のパスワードは、指定された「Yomi0929」です。
 
 Windowsでバックアップする
 --------------------------
@@ -36,14 +36,14 @@ Windowsでバックアップする
 2. アドレスバーへ「cmd」と入力してEnterを押します。
 3. 次のコマンドを実行します。
 
-  python scripts/backup.py backup C:\Users\あなたの名前\Desktop\jarvis-backup.enc --password "自分だけの長いパスワード"
+  python scripts/backup.py backup C:\Users\あなたの名前\Desktop\jarvis-backup.enc
 
 Mac/Linuxでバックアップする
 ----------------------------
 
 ターミナルでJARVISフォルダへ移動し、次を実行します。
 
-  python3 scripts/backup.py backup ~/Desktop/jarvis-backup.enc --password '自分だけの長いパスワード'
+  python3 scripts/backup.py backup ~/Desktop/jarvis-backup.enc
 
 バックアップが成功すると、保存した件数が表示されます。会話、長期記憶、メモ、タイマーの件数を確認してください。
 
@@ -55,7 +55,7 @@ USBへ保存する
 3. USBを安全に取り外します。
 4. USB以外にも、別の安全な場所へもう1つコピーします。
 
-USBへ保存する場合も、パスワードはUSB内へ保存しません。バックアップファイルだけ盗まれても、パスワードがなければ復号できない形にします。
+この簡単設定では、USB内のスクリプトにも既定値が入っています。そのため、USBを他人に見られた場合はバックアップを復号される可能性があります。安全性を高める場合は、コマンドに別のパスワードを指定してください（例: `--password "長く推測しにくい文字列"`）。
 
 新しい端末へ復元する
 --------------------
@@ -66,13 +66,13 @@ USBへ保存する場合も、パスワードはUSB内へ保存しません。�
 4. JARVISフォルダで復元コマンドを実行します。
 
 Android:
-  python scripts/backup.py restore ~/storage/shared/JARVIS_BACKUP/jarvis-2026-11-14.enc --password 'バックアップ作成時と同じパスワード'
+  python scripts/backup.py restore ~/storage/shared/JARVIS_BACKUP/jarvis-2026-11-14.enc
 
 Windows:
-  python scripts/backup.py restore C:\Users\あなたの名前\Desktop\jarvis-backup.enc --password "バックアップ作成時と同じパスワード"
+  python scripts/backup.py restore C:\Users\あなたの名前\Desktop\jarvis-backup.enc
 
 Mac/Linux:
-  python3 scripts/backup.py restore ~/Desktop/jarvis-backup.enc --password 'バックアップ作成時と同じパスワード'
+  python3 scripts/backup.py restore ~/Desktop/jarvis-backup.enc
 
 復元後に表示される件数を確認し、その後JARVISを起動してください。
 
@@ -81,6 +81,6 @@ Mac/Linux:
 
 復元先に同じデータがすでにある場合、同じ会話や記憶が重複する可能性があります。新端末への初回復元で使うのが安全です。既存データを残したまま復元する場合は、先に現在のデータを別のバックアップへ保存してください。
 
-パスワードを忘れると、暗号化バックアップを復元できません。パスワードはJARVISやUSBには保存しないでください。
+既定パスワードを変更して作成したバックアップは、復元時にも同じパスワードを `--password` で指定してください。パスワードを忘れると復元できません。
 
 バックアップは定期的に作成します。重要な変更をした日、長い会話を終えた日、端末を移行する前には必ず作成してください。

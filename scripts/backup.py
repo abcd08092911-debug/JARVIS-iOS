@@ -6,6 +6,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from cryptography.fernet import Fernet
 from src.jarvis import db
 
+# ユーザー指定の簡単セットアップ用既定パスワード。
+# より高い安全性が必要な場合は、コマンドの --password で上書きできます。
+DEFAULT_PASSWORD = 'Yomi0929'
+
 def key_from_password(password):
     return base64.urlsafe_b64encode(hashlib.sha256(password.encode('utf-8')).digest())
 
@@ -41,8 +45,8 @@ def restore(input_path, password):
 def main():
     ap=argparse.ArgumentParser(description='JARVISの会話・記憶を暗号化バックアップ/復元します')
     sub=ap.add_subparsers(dest='cmd',required=True)
-    b=sub.add_parser('backup'); b.add_argument('output'); b.add_argument('--password',required=True)
-    r=sub.add_parser('restore'); r.add_argument('input'); r.add_argument('--password',required=True)
+    b=sub.add_parser('backup'); b.add_argument('output'); b.add_argument('--password',default=DEFAULT_PASSWORD)
+    r=sub.add_parser('restore'); r.add_argument('input'); r.add_argument('--password',default=DEFAULT_PASSWORD)
     a=ap.parse_args()
     if a.cmd=='backup': backup(Path(a.output),a.password)
     else: restore(Path(a.input),a.password)

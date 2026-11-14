@@ -4,8 +4,8 @@ from .config import APP_DIR, DB_PATH
 
 def connect():
     APP_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
+    conn=sqlite3.connect(DB_PATH, timeout=10)
+    conn.row_factory=sqlite3.Row
     return conn
 
 def initialize():
@@ -14,15 +14,21 @@ def initialize():
         CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, role TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
         CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
         CREATE TABLE IF NOT EXISTS timers (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL, due_at TEXT NOT NULL, done INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+        CREATE TABLE IF NOT EXISTS memories (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL DEFAULT 'fact', content TEXT NOT NULL, tags TEXT NOT NULL DEFAULT '', importance INTEGER NOT NULL DEFAULT 3, source TEXT NOT NULL DEFAULT 'user', last_accessed TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+        CREATE INDEX IF NOT EXISTS idx_memories_importance ON memories(importance DESC, updated_at DESC);
         ''')
+        try:
+            conn.execute("CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(content, tags, content='memories', content_rowid='id')")
+            conn.execute("INSERT INTO memories_fts(rowid,content,tags) SELECT id,content,tags FROM memories WHERE id NOT IN (SELECT rowid FROM memories_fts)")
+        except sqlite3.OperationalError:
+            pass
 
 def add_message(role, content):
     with connect() as conn:
-        cur = conn.execute("INSERT INTO messages(role,content) VALUES (?,?)", (role, content)); return cur.lastrowid
+        cur=conn.execute("INSERT INTO messages(role,content) VALUES (?,?)",(role,content)); return cur.lastrowid
 
 def recent_messages(limit=30):
-    with connect() as conn:
-        rows=conn.execute("SELECT id,role,content,created_at FROM messages ORDER BY id DESC LIMIT ?", (max(1,min(limit,100)),)).fetchall()
+    with connect() as conn: rows=conn.execute("SELECT id,role,content,created_at FROM messages ORDER BY id DESC LIMIT ?",(max(1,min(limit,200)),)).fetchall()
     return [dict(r) for r in reversed(rows)]
 
 def add_note(content):
@@ -30,23 +36,52 @@ def add_note(content):
         cur=conn.execute("INSERT INTO notes(content) VALUES (?)",(content,)); return cur.lastrowid
 
 def search_notes(keyword, limit=20):
-    with connect() as conn:
-        rows=conn.execute("SELECT id,content,created_at FROM notes WHERE content LIKE ? ORDER BY id DESC LIMIT ?",(f"%{keyword}%",limit)).fetchall()
+    with connect() as conn: rows=conn.execute("SELECT id,content,created_at FROM notes WHERE content LIKE ? ORDER BY id DESC LIMIT ?",(f"%{keyword}%",limit)).fetchall()
     return [dict(r) for r in rows]
 
-def add_timer(label, due_at):
+def add_memory(content, kind='fact', importance=3, tags='', source='user'):
+    content=content.strip(); importance=max(1,min(int(importance),5))
+    if not content: raise ValueError('記憶内容が空です')
+    with connect() as conn:
+        old=conn.execute("SELECT id FROM memories WHERE content=?",(content,)).fetchone()
+        if old:
+            conn.execute("UPDATE memories SET importance=max(importance,?),tags=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",(importance,tags,old['id'])); return old['id']
+        cur=conn.execute("INSERT INTO memories(kind,content,tags,importance,source) VALUES (?,?,?,?,?)",(kind,content,tags,importance,source)); mid=cur.lastrowid
+        try: conn.execute("INSERT INTO memories_fts(rowid,content,tags) VALUES (?,?,?)",(mid,content,tags))
+        except sqlite3.OperationalError: pass
+        return mid
+
+def search_memories(query, limit=12):
+    query=(query or '').strip(); limit=max(1,min(limit,50))
+    with connect() as conn:
+        rows=[]
+        if query:
+            try:
+                terms=' OR '.join('"'+x.replace('"','')+'"' for x in query.split() if x)
+                rows=conn.execute("SELECT m.id,m.kind,m.content,m.tags,m.importance,m.created_at,m.updated_at FROM memories_fts f JOIN memories m ON m.id=f.rowid WHERE memories_fts MATCH ? ORDER BY m.importance DESC,m.updated_at DESC LIMIT ?",(terms,limit)).fetchall()
+            except sqlite3.OperationalError: pass
+            if not rows: rows=conn.execute("SELECT id,kind,content,tags,importance,created_at,updated_at FROM memories WHERE content LIKE ? OR tags LIKE ? ORDER BY importance DESC,updated_at DESC LIMIT ?",(f"%{query}%",f"%{query}%",limit)).fetchall()
+        else:
+            rows=conn.execute("SELECT id,kind,content,tags,importance,created_at,updated_at FROM memories ORDER BY importance DESC,updated_at DESC LIMIT ?",(limit,)).fetchall()
+        ids=[r['id'] for r in rows]
+        if ids: conn.executemany("UPDATE memories SET last_accessed=CURRENT_TIMESTAMP WHERE id=?",[(i,) for i in ids])
+    return [dict(r) for r in rows]
+
+def list_memories(limit=100): return search_memories('',limit)
+
+def complete_timer(timer_id):
+    with connect() as conn:
+        cur=conn.execute("UPDATE timers SET done=1 WHERE id=?",(timer_id,)); return cur.rowcount==1
+
+def add_timer(label,due_at):
     with connect() as conn:
         cur=conn.execute("INSERT INTO timers(label,due_at) VALUES (?,?)",(label,due_at)); return cur.lastrowid
 
 def list_timers(include_done=False):
-    sql="SELECT id,label,due_at,done,created_at FROM timers" + ("" if include_done else " WHERE done=0") + " ORDER BY due_at"
+    sql="SELECT id,label,due_at,done,created_at FROM timers"+("" if include_done else " WHERE done=0")+" ORDER BY due_at"
     with connect() as conn: rows=conn.execute(sql).fetchall()
     return [dict(r) for r in rows]
 
-def complete_timer(timer_id):
-    with connect() as conn:
-        cur=conn.execute("UPDATE timers SET done=1 WHERE id=?",(timer_id,)); return cur.rowcount == 1
-
 def export_data():
     with connect() as conn:
-        return {"messages":[dict(r) for r in conn.execute("SELECT role,content,created_at FROM messages ORDER BY id")],"notes":[dict(r) for r in conn.execute("SELECT content,created_at FROM notes ORDER BY id")],"timers":[dict(r) for r in conn.execute("SELECT label,due_at,done,created_at FROM timers ORDER BY id")]}
+        return {'messages':[dict(r) for r in conn.execute('SELECT role,content,created_at FROM messages ORDER BY id')],'notes':[dict(r) for r in conn.execute('SELECT content,created_at FROM notes ORDER BY id')],'memories':[dict(r) for r in conn.execute('SELECT kind,content,tags,importance,source,created_at,updated_at FROM memories ORDER BY id')],'timers':[dict(r) for r in conn.execute('SELECT label,due_at,done,created_at FROM timers ORDER BY id')]}

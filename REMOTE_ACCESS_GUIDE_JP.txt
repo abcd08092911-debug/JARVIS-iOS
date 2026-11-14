@@ -1,0 +1,26 @@
+JARVIS遠隔子機接続（同じWi-Fi不要）
+====================================
+
+安全な方式はTailscale VPNです。SC-56BをTailscaleへ参加させ、子機にもTailscaleを入れると、外出先からも同じ仮想ネットワークでSC-56Bへ接続できます。SC-56Bのルーターのポート開放はしません。
+
+1. SC-56BへTailscaleをインストール
+2. SC-56Bと子機（iPhone、Android、Windows等）を同じTailscaleアカウント／tailnetへ参加
+3. SC-56BでJARVISをLAN待受にする
+
+Termuxの起動例:
+  export JARVIS_BIND=0.0.0.0
+  export JARVIS_API_TOKEN='十分に長いランダムなトークン'
+  python run_local.py
+
+4. TailscaleアプリでSC-56Bの100.x.x.xアドレスを確認
+5. 子機のブラウザで次へ接続
+  http://100.x.x.x:8765/
+
+必ずJARVIS_API_TOKENを設定してください。Web画面のトークン欄へ同じ値を入力します。トークンをGitHub、USB、スクリーンショット、チャットへ保存しないでください。
+
+注意:
+- Tailscaleのアカウント登録と端末認証はユーザー本人が行います。
+- iPhone・Androidの子機もTailscaleを有効にする必要があります。
+- SC-56BのJARVISアプリ／Termuxが停止していると接続できません。
+- Tailscaleを使わずにポート8765をインターネットへ直接公開しないでください。
+- Tailscale未導入時は、同じWi-Fi内の接続だけが基本です。

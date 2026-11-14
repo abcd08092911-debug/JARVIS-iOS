@@ -1,4 +1,11 @@
-ここに llama.cpp 対応の GGUFモデルを model.gguf という名前で配置します。
+SC-56B用の標準モデルは Qwen3-1.7B-GGUF の Q8_0 です。
+ダウンロード後、ここに model.gguf という名前で配置します。
+
+簡単な取得方法:
+  bash scripts/download_qwen3_1_7b.sh
+
+公式配布元:
+  https://huggingface.co/Qwen/Qwen3-1.7B-GGUF
 
 SC-56Bでは小型・低ビット量子化モデルから試してください。モデルの配布元、ライセンス、日本語性能、RAM使用量を必ず確認してください。モデル本体はサイズとライセンスが異なるため、このスターターZIPには同梱していません。
 

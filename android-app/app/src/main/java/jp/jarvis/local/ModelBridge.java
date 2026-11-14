@@ -1,9 +1,12 @@
 package jp.jarvis.local;
 
 import java.io.File;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 final class ModelBridge {
     private static boolean loaded;
+    private static final ExecutorService INFERENCE_EXECUTOR = Executors.newSingleThreadExecutor();
     static { try { System.loadLibrary("jarvis_llama_bridge"); loaded=true; } catch (Throwable ignored) {} }
     static boolean isNativeAvailable(){ return loaded; }
     static File findModel(File externalDir){
@@ -19,6 +22,9 @@ final class ModelBridge {
         if(!loaded)return "[推論エラー] JNI推論ライブラリを読み込めません。";
         if(modelPath==null||modelPath.isEmpty())return "[モデル未配置] GGUFモデルを選択してください。";
         try { return nativeGenerate(modelPath,prompt); } catch(Throwable e){ return "[推論エラー] "+(e.getMessage()==null?e.getClass().getSimpleName():e.getMessage()); }
+    }
+    static void generateAsync(String modelPath, String prompt, java.util.function.Consumer<String> callback){
+        INFERENCE_EXECUTOR.execute(() -> { String result=generate(modelPath,prompt); if(callback!=null)callback.accept(result); });
     }
     private static native String nativeGenerate(String modelPath,String prompt);
 }

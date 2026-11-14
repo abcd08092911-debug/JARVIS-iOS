@@ -26,12 +26,14 @@ import org.json.*;
 
 public class MainActivity extends Activity {
     private static final String CODE = "Yomi0929";
-    private EditText input; private TextView log, status; private TextToSpeech tts; private SpeechRecognizer recognizer;
+    private EditText input; private TextView log, status; private Button sendButton; private TextView thinking; private ScrollView conversationScroll;
+    private TextToSpeech tts; private SpeechRecognizer recognizer;
     private SQLiteDatabase db; private JarvisStore store; private Workspace workspace; private HostServer host; private RelayServer relay; private volatile boolean running;
     private boolean shiritori = false; private String lastWord = "";
     private static final int BACKUP_SAVE=201, BACKUP_OPEN=202, MODEL_OPEN=203;
     private final ConcurrentLinkedQueue<RelayMessage> queue = new ConcurrentLinkedQueue<>();
     private final ConcurrentHashMap<String,String> replies = new ConcurrentHashMap<>();
+    private final ExecutorService inferenceExecutor = Executors.newSingleThreadExecutor();
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
@@ -54,22 +56,32 @@ public class MainActivity extends Activity {
             }catch(Exception ignored){ add("同梱モデルはありません。GGUFを選択してください。"); }
         },"jarvis-model-copy").start();
     }
+    private TextView label(String text, float size, int color){ TextView v=new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(color); v.setPadding(8,4,8,4); return v; }
+    private android.graphics.drawable.Drawable bubble(int color){ android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable(); d.setColor(color); d.setCornerRadius(22); return d; }
     private void buildUi(){
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(24,24,24,24); root.setBackgroundColor(Color.rgb(16,21,28));
-        TextView title=new TextView(this); title.setText("JARVIS 親機兼中継機"); title.setTextColor(Color.WHITE); title.setTextSize(24); root.addView(title);
-        status=new TextView(this); status.setText("停止中"); status.setTextColor(Color.LTGRAY); root.addView(status);
-        log=new TextView(this); log.setTextColor(Color.WHITE); log.setTextIsSelectable(true); ScrollView scroll=new ScrollView(this); scroll.addView(log); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        input=new EditText(this); input.setHint("JARVISへの指示"); input.setTextColor(Color.WHITE); input.setHintTextColor(Color.GRAY); root.addView(input);
-        LinearLayout row=new LinearLayout(this); Button send=new Button(this); send.setText("送信"); Button listen=new Button(this); listen.setText("音声入力"); Button hostButton=new Button(this); hostButton.setText("親機・中継機起動"); row.addView(send,new LinearLayout.LayoutParams(0,-2,1)); row.addView(listen,new LinearLayout.LayoutParams(0,-2,1)); row.addView(hostButton,new LinearLayout.LayoutParams(0,-2,1)); root.addView(row); LinearLayout backupRow=new LinearLayout(this); Button save=new Button(this);save.setText("USBへバックアップ");Button restore=new Button(this);restore.setText("USBから復元");backupRow.addView(save,new LinearLayout.LayoutParams(0,-2,1));backupRow.addView(restore,new LinearLayout.LayoutParams(0,-2,1));root.addView(backupRow);TextView model=new TextView(this);model.setText("LLM: "+ModelBridge.modelStatus(getExternalFilesDir(null)));model.setTextColor(Color.LTGRAY);root.addView(model);Button chooseModel=new Button(this);chooseModel.setText("GGUFモデルを選択");root.addView(chooseModel);setContentView(root); chooseModel.setOnClickListener(v->openModel()); save.setOnClickListener(v->openBackupSave()); restore.setOnClickListener(v->openBackupRestore());
-        send.setOnClickListener(v -> chat(input.getText().toString(), true)); hostButton.setOnClickListener(v -> startHost()); listen.setOnClickListener(v -> listen());
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(20,18,20,12); root.setBackgroundColor(Color.rgb(12,18,26));
+        LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.VERTICAL); header.setPadding(16,12,16,12); header.setBackground(bubble(Color.rgb(27,48,64)));
+        header.addView(label("JARVIS",26,Color.WHITE)); status=label("● 待機中　ローカルAI準備中",13,Color.rgb(173,220,190)); header.addView(status); root.addView(header,new LinearLayout.LayoutParams(-1,-2));
+        conversationScroll=new ScrollView(this); log=label("JARVISへようこそ。質問や指示を入力してください。",16,Color.WHITE); log.setTextIsSelectable(true); log.setPadding(4,18,4,18); conversationScroll.addView(log); root.addView(conversationScroll,new LinearLayout.LayoutParams(-1,0,1));
+        thinking=label("考え中…",13,Color.LTGRAY); thinking.setVisibility(View.GONE); root.addView(thinking,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout composer=new LinearLayout(this); composer.setGravity(android.view.Gravity.CENTER_VERTICAL); input=new EditText(this); input.setHint("JARVISへの指示を入力"); input.setTextColor(Color.WHITE); input.setHintTextColor(Color.rgb(150,160,170)); input.setSingleLine(false); input.setMaxLines(3); input.setPadding(16,4,16,4); input.setBackground(bubble(Color.rgb(30,39,50))); composer.addView(input,new LinearLayout.LayoutParams(0,-2,1)); sendButton=new Button(this); sendButton.setText("送信"); composer.addView(sendButton,new LinearLayout.LayoutParams(-2,-2)); root.addView(composer,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout quick=new LinearLayout(this); Button listen=new Button(this); listen.setText("音声"); Button hostButton=new Button(this); hostButton.setText("親機・中継機"); quick.addView(listen,new LinearLayout.LayoutParams(0,-2,1)); quick.addView(hostButton,new LinearLayout.LayoutParams(0,-2,1)); root.addView(quick);
+        Button adminToggle=new Button(this); adminToggle.setText("管理・その他の機能を表示"); root.addView(adminToggle); LinearLayout admin=new LinearLayout(this); admin.setOrientation(LinearLayout.VERTICAL); admin.setVisibility(View.GONE);
+        LinearLayout backupRow=new LinearLayout(this); Button save=new Button(this);save.setText("USBへバックアップ");Button restore=new Button(this);restore.setText("USBから復元");backupRow.addView(save,new LinearLayout.LayoutParams(0,-2,1));backupRow.addView(restore,new LinearLayout.LayoutParams(0,-2,1));admin.addView(backupRow); TextView model=label("LLM: "+ModelBridge.modelStatus(getExternalFilesDir(null)),12,Color.LTGRAY);admin.addView(model);Button chooseModel=new Button(this);chooseModel.setText("GGUFモデルを選択");admin.addView(chooseModel);root.addView(admin);
+        setContentView(root); adminToggle.setOnClickListener(v->{admin.setVisibility(admin.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE); adminToggle.setText(admin.getVisibility()==View.VISIBLE?"管理・その他の機能を隠す":"管理・その他の機能を表示");}); chooseModel.setOnClickListener(v->openModel()); save.setOnClickListener(v->openBackupSave()); restore.setOnClickListener(v->openBackupRestore()); sendButton.setOnClickListener(v -> chat(input.getText().toString(), true)); hostButton.setOnClickListener(v -> startHost()); listen.setOnClickListener(v -> listen());
     }
     private void startHost(){
         if(running)return; running=true; host=new HostServer(8765); relay=new RelayServer(9000); host.start(); relay.start();
-        new Thread(() -> { while(running){ RelayMessage m=queue.poll(); if(m!=null){ String answer=chatInternal(m.text); replies.put(m.id,answer); } else try{Thread.sleep(80);}catch(Exception ignored){} } }).start();
-        status.setText("親機:8765 / 中継機:9000 起動中\n接続コード・トークン: Yomi0929");
+        new Thread(() -> { while(running){ RelayMessage m=queue.poll(); if(m!=null){ String answer=runChatForApi(m.text); replies.put(m.id,answer); } else try{Thread.sleep(80);}catch(Exception ignored){} } },"jarvis-relay-worker").start();
+        status.setText("● 親機:8765 / 中継機:9000 起動中　子機: /client");
         add("JARVIS: 親機と中継機を起動しました。\n子機URL: http://SC-56BのIPアドレス:9000/client");
     }
-    private void chat(String text, boolean speak){ if(text==null||text.trim().isEmpty())return; input.setText(""); String answer=chatInternal(text); add("あなた: "+text+"\nJARVIS: "+answer); if(speak&&tts!=null)tts.speak(answer,TextToSpeech.QUEUE_FLUSH,null,"jarvis"); }
+    private void chat(String text, boolean speak){
+        if(text==null||text.trim().isEmpty()||sendButton==null||!sendButton.isEnabled())return;
+        final String request=text.trim(); input.setText(""); sendButton.setEnabled(false); thinking.setVisibility(View.VISIBLE); status.setText("● 考え中…");
+        inferenceExecutor.submit(() -> { final String answer=chatInternal(request); runOnUiThread(() -> { add("あなた\n"+request+"\n\nJARVIS\n"+answer); sendButton.setEnabled(true); thinking.setVisibility(View.GONE); status.setText(running?"● 親機・中継機 起動中":"● 待機中"); if(speak&&tts!=null)tts.speak(answer,TextToSpeech.QUEUE_FLUSH,null,"jarvis"); }); });
+    }
+    private String runChatForApi(String text){ try { return inferenceExecutor.submit(() -> chatInternal(text)).get(); } catch(Exception e){ return "[推論エラー] "+(e.getMessage()==null?"処理に失敗しました":e.getMessage()); } }
     private String chatInternal(String text){
         store.message("user",text);
         String answer=answer(text);
@@ -106,7 +118,7 @@ public class MainActivity extends Activity {
         for(String[] x:words) if(x[0].equals(last)) return x[1];
         return "りんご";
     }
-    private void add(String x){ runOnUiThread(() -> log.append(x+"\n\n")); }
+    private void add(String x){ runOnUiThread(() -> { log.append(x+"\n\n"); conversationScroll.post(() -> conversationScroll.fullScroll(View.FOCUS_DOWN)); }); }
     private void listen(){
         if(!SpeechRecognizer.isRecognitionAvailable(this)){add("音声認識を利用できません。");return;}
         if(recognizer!=null)recognizer.destroy(); recognizer=SpeechRecognizer.createSpeechRecognizer(this);
@@ -121,7 +133,7 @@ public class MainActivity extends Activity {
     }
     private class HostServer extends HttpServer { HostServer(int p){super(p);} HttpResponse route(HttpRequest r){
         if(r.path.equals("/health"))return new HttpResponse(200,"{\"status\":\"ok\",\"mode\":\"android-apk-host-relay\",\"relay_port\":9000}");
-        if(r.path.equals("/chat")&&r.method.equals("POST")){String text=jsonText(r.body);String ans=chatInternal(text);return new HttpResponse(200,"{\"status\":\"ok\",\"reply\":\""+json(ans)+"\"}");}
+        if(r.path.equals("/chat")&&r.method.equals("POST")){String text=jsonText(r.body);String ans=runChatForApi(text);return new HttpResponse(200,"{\"status\":\"ok\",\"reply\":\""+json(ans)+"\"}");}
         return new HttpResponse(200,"{\"status\":\"ok\",\"message\":\"JARVIS Android親機\"}");
     }}
     private class RelayServer extends HttpServer { RelayServer(int p){super(p);} HttpResponse route(HttpRequest r){
@@ -133,7 +145,7 @@ public class MainActivity extends Activity {
             if(path.equals("/client/api/memory")&&r.method.equals("POST")){long id=store.memory(jsonValue(r.body,"content"),jsonValue(r.body,"kind"),3,jsonValue(r.body,"tags"),"client");return new HttpResponse(200,"{\"saved\":true,\"id\":"+id+"}");}
             if(path.equals("/client/api/notes")&&r.method.equals("POST")){long id=store.note(jsonValue(r.body,"content"));return new HttpResponse(200,"{\"saved\":true,\"id\":"+id+"}");}
             if(path.equals("/client/api/timers")&&r.method.equals("POST")){String label=jsonValue(r.body,"label");long sec=Long.parseLong(jsonValue(r.body,"seconds"));long id=store.timer(label,sec);scheduleTimer(id,label,sec);return new HttpResponse(200,"{\"saved\":true,\"id\":"+id+"}");}
-            if(path.equals("/client/api/chat")&&r.method.equals("POST")){String ans=chatInternal(jsonValue(r.body,"text"));return new HttpResponse(200,"{\"reply\":\""+json(ans)+"\"}");}
+            if(path.equals("/client/api/chat")&&r.method.equals("POST")){String ans=runChatForApi(jsonValue(r.body,"text"));return new HttpResponse(200,"{\"reply\":\""+json(ans)+"\"}");}
             if(path.equals("/client/api/history")) return new HttpResponse(200,"{\"messages\":"+store.history(50)+",\"summaries\":"+store.summaries()+"}");
             if(path.equals("/client/api/memory")) {String q=jsonValue(r.body,"q");return new HttpResponse(200,"{\"memories\":"+store.memories(q)+"}");}
             if(path.equals("/client/api/notes/search")) return new HttpResponse(200,"{\"results\":"+store.notes(jsonValue(r.body,"q"))+"}");
@@ -169,5 +181,5 @@ public class MainActivity extends Activity {
     private void openBackupSave(){Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.setType("application/octet-stream");i.putExtra(Intent.EXTRA_TITLE,"jarvis-backup-"+System.currentTimeMillis()+".jvb");startActivityForResult(i,BACKUP_SAVE);}
     private void openBackupRestore(){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("application/octet-stream");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,BACKUP_OPEN);}
     @Override protected void onActivityResult(int req,int res,Intent data){super.onActivityResult(req,res,data);if(res!=RESULT_OK||data==null)return;try{File tmp=new File(getCacheDir(),"backup.tmp");if(req==MODEL_OPEN){File dir=getExternalFilesDir(null);if(dir!=null){String name="model.gguf";String sourceName=data.getData().getLastPathSegment();if(sourceName!=null&&sourceName.toLowerCase().endsWith(".gguf"))name=sourceName;try(InputStream in=getContentResolver().openInputStream(data.getData());OutputStream out=new FileOutputStream(new File(dir,name))){byte[] b=new byte[8192];int readCount;while((readCount=in.read(b))>0)out.write(b,0,readCount);}add("GGUFモデルを外部ファイル領域へ配置しました: "+name);}return;}if(req==BACKUP_SAVE){EncryptedBackup.save(tmp,store.exportAll(),CODE);try(InputStream in=new FileInputStream(tmp);OutputStream out=getContentResolver().openOutputStream(data.getData())){byte[] b=new byte[8192];int readCount;while((readCount=in.read(b))>0)out.write(b,0,readCount);}if(tmp.length()>0)add("暗号化バックアップを保存しました（保存検証済み）。");}else{try(InputStream in=getContentResolver().openInputStream(data.getData());OutputStream out=new FileOutputStream(tmp)){byte[] b=new byte[8192];int readCount;while((readCount=in.read(b))>0)out.write(b,0,readCount);}store.importAll(EncryptedBackup.load(tmp,CODE));add("バックアップを復元しました。");}}catch(Exception e){add("バックアップ処理に失敗しました: "+e.getMessage());}}
-    @Override protected void onDestroy(){if(recognizer!=null)recognizer.destroy();if(tts!=null)tts.shutdown();super.onDestroy();}
+    @Override protected void onDestroy(){running=false;if(recognizer!=null)recognizer.destroy();if(tts!=null)tts.shutdown();inferenceExecutor.shutdownNow();super.onDestroy();}
 }

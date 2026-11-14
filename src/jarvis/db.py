@@ -119,6 +119,6 @@ def complete_timer(timer_id):
 
 def export_data():
     with connect() as conn:
-        return {'messages':[dict(r) for r in conn.execute('SELECT role,content,created_at FROM messages ORDER BY id')],'notes':[dict(r) for r in conn.execute('SELECT content,created_at FROM notes ORDER BY id')],'memories':[dict(r) for r in conn.execute('SELECT kind,content,tags,importance,source,active,supersedes_id,created_at,updated_at FROM memories ORDER BY id')],'timers':[dict(r) for r in conn.execute('SELECT label,due_at,done,created_at FROM timers ORDER BY id')]}
+        return {'messages':[dict(r) for r in conn.execute('SELECT role,content,created_at FROM messages ORDER BY id')],'notes':[dict(r) for r in conn.execute('SELECT content,created_at FROM notes ORDER BY id')],'memories':[dict(r) for r in conn.execute('SELECT kind,content,tags,importance,source,active,supersedes_id,last_accessed,created_at,updated_at FROM memories ORDER BY id')],'conversation_summaries':[dict(r) for r in conn.execute('SELECT first_message_id,last_message_id,summary,created_at FROM conversation_summaries ORDER BY id')],'timers':[dict(r) for r in conn.execute('SELECT label,due_at,done,created_at FROM timers ORDER BY id')]}
 
 initialize()

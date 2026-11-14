@@ -1,0 +1,86 @@
+JARVIS 会話・記憶バックアップ／復元ガイド
+===========================================
+
+JARVISの会話、長期記憶、プロフィール、会話要約、メモ、タイマーは、暗号化した1つのバックアップファイルへ保存できます。
+
+バックアップに入るもの
+----------------------
+
+- 会話履歴
+- 長期記憶
+- 名前・好み・目標などのプロフィール記憶
+- 自動生成された会話要約
+- メモ
+- タイマー
+
+AIモデル本体は通常バックアップに入れません。モデルは容量が大きいため、USBのモデルファイルを別に保管します。APIキー、Apple IDパスワード、中継トークンはバックアップへ自動保存しません。
+
+Androidでバックアップする
+--------------------------
+
+JARVISを停止した後、TermuxでJARVISフォルダへ移動します。
+
+  cd ~/storage/shared/JARVIS
+
+バックアップ先の例:
+
+  mkdir -p ~/storage/shared/JARVIS_BACKUP
+  python scripts/backup.py backup ~/storage/shared/JARVIS_BACKUP/jarvis-2026-11-14.enc --password '自分だけの長いパスワード'
+
+実際のパスワードは、この説明書やUSBへ書かないでください。
+
+Windowsでバックアップする
+--------------------------
+
+1. JARVISフォルダを開きます。
+2. アドレスバーへ「cmd」と入力してEnterを押します。
+3. 次のコマンドを実行します。
+
+  python scripts/backup.py backup C:\Users\あなたの名前\Desktop\jarvis-backup.enc --password "自分だけの長いパスワード"
+
+Mac/Linuxでバックアップする
+----------------------------
+
+ターミナルでJARVISフォルダへ移動し、次を実行します。
+
+  python3 scripts/backup.py backup ~/Desktop/jarvis-backup.enc --password '自分だけの長いパスワード'
+
+バックアップが成功すると、保存した件数が表示されます。会話、長期記憶、メモ、タイマーの件数を確認してください。
+
+USBへ保存する
+--------------
+
+1. JARVISを停止します。
+2. 暗号化バックアップファイルをUSBのBACKUP_ENCRYPTEDフォルダへコピーします。
+3. USBを安全に取り外します。
+4. USB以外にも、別の安全な場所へもう1つコピーします。
+
+USBへ保存する場合も、パスワードはUSB内へ保存しません。バックアップファイルだけ盗まれても、パスワードがなければ復号できない形にします。
+
+新しい端末へ復元する
+--------------------
+
+1. 新しい端末へJARVIS本体をコピーします。
+2. 必要な初回セットアップを実行します。
+3. JARVISをまだ起動していない状態で、暗号化バックアップを新端末へコピーします。
+4. JARVISフォルダで復元コマンドを実行します。
+
+Android:
+  python scripts/backup.py restore ~/storage/shared/JARVIS_BACKUP/jarvis-2026-11-14.enc --password 'バックアップ作成時と同じパスワード'
+
+Windows:
+  python scripts/backup.py restore C:\Users\あなたの名前\Desktop\jarvis-backup.enc --password "バックアップ作成時と同じパスワード"
+
+Mac/Linux:
+  python3 scripts/backup.py restore ~/Desktop/jarvis-backup.enc --password 'バックアップ作成時と同じパスワード'
+
+復元後に表示される件数を確認し、その後JARVISを起動してください。
+
+注意事項
+--------
+
+復元先に同じデータがすでにある場合、同じ会話や記憶が重複する可能性があります。新端末への初回復元で使うのが安全です。既存データを残したまま復元する場合は、先に現在のデータを別のバックアップへ保存してください。
+
+パスワードを忘れると、暗号化バックアップを復元できません。パスワードはJARVISやUSBには保存しないでください。
+
+バックアップは定期的に作成します。重要な変更をした日、長い会話を終えた日、端末を移行する前には必ず作成してください。

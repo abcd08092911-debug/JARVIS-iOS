@@ -1,0 +1,30 @@
+外部アプリに依存しないJARVIS遠隔接続
+====================================
+
+JARVIS独自の中継サーバーと、SC-56B側の中継クライアントを使います。
+Tailscale、専用VPNアプリ、特定企業の中継サービスは必要ありません。
+
+構成:
+  子機ブラウザ → JARVIS relay_server.py ← relay_client.py ← SC-56B親機
+
+中継サーバーをPCまたは自分のサーバーで起動:
+  export JARVIS_RELAY_TOKEN='長いランダム文字列'
+  uvicorn relay_server:app --host 0.0.0.0 --port 9000
+
+SC-56B側:
+  export JARVIS_RELAY_URL='https://あなたの中継サーバー:9000'
+  export JARVIS_RELAY_ROOM='自分で決めた接続コード'
+  export JARVIS_RELAY_TOKEN='中継サーバーと同じトークン'
+  python relay_client.py
+
+子機:
+  https://あなたの中継サーバー:9000/client
+  接続コードと中継トークンを入力
+
+安全:
+- 実運用はHTTPSにしてください。
+- 中継トークンを公開URLやGitHubへ書かないでください。
+- 中継サーバーはメッセージを永続保存しない設計です。
+- 中継サーバーが停止しても、USBから別のPCへコピーして再起動できます。
+- インターネット越しには、サーバーを外部から到達可能にする回線、固定アドレスまたはDNS、HTTPS証明書のいずれかが必要です。
+- 外部サービスを一切使わず、自宅回線も公開しない場合、インターネット越しの接続自体はできません。

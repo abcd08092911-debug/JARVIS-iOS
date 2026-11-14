@@ -1,0 +1,8 @@
+iPhone親機用IPAについて
+========================
+
+完成した署名済みIPAをこのフォルダへ JARVIS.ipa という名前で配置します。
+
+IPAはAppleの署名が必要です。Sideloadlyを使う場合は、PCでIPAを指定し、接続したiPhoneへインストールします。
+
+IOS/SOURCE にiPhone親機版のSwiftUIソースとGitHub Actions設定を含めています。GitHub ActionsでJARVIS.ipaを作成し、Windows PCのSideloadlyでiPhoneへ入れます。この版はiPhone内記憶と親機HTTPサーバーを含みます。高性能な量子化LLMはiOS用推論ライブラリとモデルを別途追加する段階です。

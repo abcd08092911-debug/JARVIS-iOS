@@ -1,0 +1,7 @@
+ここに llama.cpp 対応の GGUFモデルを model.gguf という名前で配置します。
+
+SC-56Bでは小型・低ビット量子化モデルから試してください。モデルの配布元、ライセンス、日本語性能、RAM使用量を必ず確認してください。モデル本体はサイズとライセンスが異なるため、このスターターZIPには同梱していません。
+
+別名のモデルを使う場合:
+JARVIS_MODEL_PATH=/path/to/model.gguf
+JARVIS_LLAMA_BIN=/path/to/llama-cli

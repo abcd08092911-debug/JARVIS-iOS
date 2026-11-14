@@ -1,0 +1,16 @@
+name: JARVIS
+targets:
+  JARVIS:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources: [JARVIS]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.jarvis.local
+      SWIFT_VERSION: 5.0
+      INFOPLIST_KEY_NSCameraUsageDescription: "JARVISの将来の視覚機能に使用します。"
+      INFOPLIST_KEY_NSMicrophoneUsageDescription: "JARVISの音声入力に使用します。"
+      INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "JARVISの音声入力に使用します。"
+      INFOPLIST_KEY_NSLocalNetworkUsageDescription: "JARVIS親機として同じWi-Fiの端末と通信します。"
+      INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking: YES
+      CODE_SIGNING_ALLOWED: NO

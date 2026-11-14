@@ -1,0 +1,15 @@
+JARVIS v0.2 USB復旧キット
+==========================
+推奨: USB-A/USB-C両対応、64GB以上。モデルを複数保存する場合は128GB以上も検討する。
+
+scripts/build_usb_kit.sh を実行すると、INSTALL、RELEASES、BACKUP_ENCRYPTED、CHECKSUMS、MANUALを含むキットを生成する。
+
+復旧手順:
+1. 新端末へJARVIS本体をコピーする。
+2. 対応OSの手順で依存関係を導入する。
+3. GGUFモデルをライセンス確認後に配置する。
+4. 暗号化バックアップを別媒体からコピーする。
+5. scripts/backup.py restore をパスワード付きで実行する。
+6. localhostで動作確認後、必要なら同一Wi-Fi内のLAN接続を設定する。
+
+USB挿入時の自動実行は行わない。暗号鍵・パスワードはUSB内に保存しない。USBを唯一のバックアップにしない。

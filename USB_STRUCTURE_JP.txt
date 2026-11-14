@@ -1,0 +1,12 @@
+JARVIS USB構成
+==============
+
+COMMON/       共通設定・人格・復元データ
+HOST/         Android/PCなど親機用本体
+CLIENT/       子機接続用手順
+IOS/          iPhone版IPAを後で入れる場所
+AI_MODELS/    GGUFモデル保存場所
+BACKUP_ENCRYPTED/ 暗号化記憶バックアップ
+RECOVERY/     復旧手順・チェックサム
+
+IPAは後で IOS/IPA/JARVIS.ipa に配置します。現段階でもAndroidまたはPCを親機にして、iPhoneをSafari子機として使えます。

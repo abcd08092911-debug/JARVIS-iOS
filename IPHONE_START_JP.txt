@@ -1,0 +1,15 @@
+iPhoneでJARVISを使う方法
+========================
+
+iPhoneにはJARVIS本体をインストールしません。AndroidをJARVIS本体として起動し、iPhoneのSafariから接続します。
+
+1. AndroidとiPhoneを同じWi-Fiに接続する。
+2. AndroidでJARVISをLAN接続モードで起動する。
+3. AndroidのWi-Fi IPアドレスを確認する。例: 192.168.1.25
+4. iPhoneのSafariで http://192.168.1.25:8765/ を開く。
+5. 画面のトークン欄に、Android起動時に設定したJARVIS_API_TOKENを入力する。
+6. Safariの共有ボタンから「ホーム画面に追加」を選ぶ。
+
+ホーム画面に追加すると、次回からJARVISアプリのように起動できます。
+
+外出先から使う場合は、ルーターのポート開放をせず、VPN経由で接続してください。Wi-Fiが切れていると、Android本体へ接続できません。Androidがオフラインでも、同じWi-Fi内ならローカルAI・メモ・タイマーなどは利用できます。

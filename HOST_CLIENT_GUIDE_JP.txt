@@ -1,0 +1,17 @@
+JARVIS親機・子機ガイド
+=======================
+
+親機は、AIモデル・記憶・メモを持って実際に処理する端末です。Android、Windows、macOS、Linuxで動かせます。親機は START_JARVIS 系の起動ファイルで起動します。
+
+子機は、親機へ接続してJARVISを使う端末です。同じWi-Fi内なら、iPhoneはSafariで親機URLを開くだけで使えます。PCやAndroidはブラウザ、または START_CHILD_WINDOWS.bat から接続できます。
+
+親機を起動するとき:
+JARVIS_BIND=0.0.0.0 JARVIS_API_TOKEN="長いトークン" python run_local.py
+
+子機から開くURL:
+http://親機のIPアドレス:8765/
+
+親機が壊れた場合:
+USBから別のAndroidまたはPCへ本体をコピーし、暗号化バックアップを復元して、その端末を新しい親機にします。iPhone親機はIPA完成後に同じ考え方で追加します。
+
+インターネットへポート開放はしません。外出先からはVPNを使います。

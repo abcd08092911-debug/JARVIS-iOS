@@ -1,0 +1,29 @@
+iPhoneをJARVIS親機にする手順
+============================
+
+この方式では、SideloadlyでJARVISのIPAをiPhoneへインストールし、初回起動後にUSBのバックアップを読み込みます。
+
+準備:
+- WindowsまたはmacOSのPC
+- iPhoneとUSBケーブル
+- Sideloadly
+- Apple ID（署名用）
+- JARVISのIPAファイル
+- JARVIS_USB内の暗号化バックアップ
+
+手順:
+1. PCにSideloadlyを公式配布元からインストールする。
+2. iPhoneをUSBケーブルでPCへ接続し、iPhone側で「このコンピュータを信頼」を許可する。
+3. Sideloadlyを起動し、接続したiPhoneを選ぶ。
+4. USB内 IOS/IPA/JARVIS.ipa をSideloadlyへ指定する。
+5. Apple IDを入力して署名・インストールを開始する。
+6. iPhoneで必要な開発者信頼設定を行う。
+7. JARVISを起動し、「バックアップを復元」からUSB内のバックアップを読み込む。
+8. 親機モードを選択し、初回の管理パスワードを設定する。
+
+注意:
+- Apple IDのパスワードはJARVISの設定ファイルやUSBへ保存しない。
+- IPAは必ず入手元とチェックサムを確認する。
+- iOSの署名・再インストール条件はSideloadlyとAppleの仕様に従う。
+- IPAがUSBにまだ無い場合は、IOS/IPA/README_IPA_REQUIRED.txt を確認する。
+- iPhone上でUSBを直接実行することはできないため、バックアップはiPhoneの「ファイル」アプリ経由またはPC経由で読み込む。

@@ -20,6 +20,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
+      - name: Download Qwen3-1.7B model for APK assets
+        working-directory: android-app/app
+        run: |
+          mkdir -p src/main/assets
+          curl -L --fail --retry 3 --progress-bar \
+            'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf?download=true' \
+            -o src/main/assets/model.gguf
+          test "$(stat -c%s src/main/assets/model.gguf)" -gt 1000000000
       - name: Build debug APK
         working-directory: android-app
         run: gradle assembleDebug --stacktrace

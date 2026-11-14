@@ -38,9 +38,21 @@ public class MainActivity extends Activity {
         db=openOrCreateDatabase("jarvis.sqlite3",MODE_PRIVATE,null); store=new JarvisStore(db);
         workspace=new Workspace(new File(getFilesDir(),"JARVIS_WORKSPACE"));
         buildUi();
+        prepareBundledModel();
         if(android.os.Build.VERSION.SDK_INT>=26)startForegroundService(new Intent(this, JarvisForegroundService.class));else startService(new Intent(this, JarvisForegroundService.class));
         tts=new TextToSpeech(this, s -> { });
         if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},10);
+    }
+    private void prepareBundledModel(){
+        new Thread(() -> {
+            File dir=getExternalFilesDir(null); if(dir==null)return;
+            File target=new File(dir,"model.gguf"); if(target.exists()&&target.length()>1000000000L)return;
+            try(InputStream in=getAssets().open("model.gguf");OutputStream out=new FileOutputStream(target)){
+                byte[] b=new byte[1024*1024]; int n; long total=0;
+                while((n=in.read(b))>0){out.write(b,0,n);total+=n;if(total%(64L*1024L*1024L)<n)add("モデル展開中: "+(total/1024/1024)+"MB");}
+                add("同梱Qwen3モデルの展開が完了しました。");
+            }catch(Exception ignored){ add("同梱モデルはありません。GGUFを選択してください。"); }
+        },"jarvis-model-copy").start();
     }
     private void buildUi(){
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(24,24,24,24); root.setBackgroundColor(Color.rgb(16,21,28));

@@ -72,10 +72,22 @@ def chat(body:TextInput,x_jarvis_token:str|None=Header(default=None)):
     lower=body.text.lower()
     if any(x in body.text for x in ('覚えて','記憶して','記憶に保存','好み','好き','嫌い','目標','自分は','私は')):
         db.add_memory(body.text,kind='conversation_fact',importance=4,source='chat')
+    for kind,fact in db.profile_facts(body.text):
+        db.add_memory(fact,kind=kind,importance=5 if kind in ('profile_name','goal') else 4,source='profile_extractor')
     notes=db.search_notes(body.text[:80]); memories=db.search_memories(body.text,12)
     context='\n'.join(f"- [{m['kind']}/重要度{m['importance']}] {m['content']}" for m in memories)
     context += '\n' + '\n'.join(f"- {n['content']}" for n in notes)
     prompt=SYSTEM_PROMPT_JA+'\n\n関連する長期記憶:\n'+context+'\n\n会話:\n'+ '\n'.join(f"{m['role']}: {m['content']}" for m in db.recent_messages(MAX_CONTEXT_MESSAGES)) + '\nassistant:'
     answer=llm.generate(prompt)
-    if answer: db.add_message('assistant',answer); return {'status':'ok','mode':'offline-local','reply':answer}
+    if answer:
+        aid=db.add_message('assistant',answer)
+        # 20件ごとに会話要約を作成。モデルが使えない場合は保存をスキップする。
+        if aid >= 20 and aid % 20 == 0 and not db.summary_exists(aid):
+            chunk=db.recent_messages(20)
+            summary_prompt='次の会話を日本語で、将来役立つ事実・決定・未完了課題だけに要約してください。1000文字以内で、推測は禁止です。\n'+'\n'.join(f"{m['role']}: {m['content']}" for m in chunk)
+            summary=llm.generate(summary_prompt,max_tokens=350)
+            if summary:
+                db.add_summary(chunk[0]['id'],aid,summary)
+                db.add_memory(summary,kind='conversation_summary',importance=4,source='auto_summary')
+        return {'status':'ok','mode':'offline-local','reply':answer}
     return {'status':'llm_unavailable','mode':'core-only','message':'ローカルAIモデルを利用できません。モデル配置とllama.cpp設定をご確認ください。','detail':llm.last_error}

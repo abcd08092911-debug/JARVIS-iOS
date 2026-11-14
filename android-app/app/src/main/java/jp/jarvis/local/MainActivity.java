@@ -84,7 +84,10 @@ public class MainActivity extends Activity {
             String last=word.substring(word.length()-1); String next=nextWord(last); lastWord=next;
             return "「"+word+"」ですね。では、私の番は「"+next+"」です。次は「"+next.substring(next.length()-1)+"」からどうぞ。";
         }
-        return "ローカルAIモデルが搭載されていないため、生成回答は利用できません。記憶・メモ・タイマーなどの機能指示は利用できます。";
+        File modelFile=ModelBridge.findModel(getExternalFilesDir(null));
+        if(modelFile==null)return "[モデル未配置] GGUFモデルを選択してください。記憶・メモ・タイマーなどの機能指示は利用できます。";
+        String generated=ModelBridge.generate(modelFile.getAbsolutePath(),"あなたはJARVISです。簡潔で正確な日本語で回答してください。\nユーザー: "+text+"\nJARVIS:");
+        return generated==null||generated.trim().isEmpty()?"[推論エラー] 生成結果が空です。":generated.trim();
     }
     private String nextWord(String last){
         String[][] words={{"あ","あひる"},{"い","いぬ"},{"う","うさぎ"},{"え","えんぴつ"},{"お","おにぎり"},{"か","かめ"},{"き","きつね"},{"く","くるま"},{"け","けいき"},{"こ","こあら"},{"さ","さくら"},{"し","しか"},{"す","すいか"},{"せ","せみ"},{"そ","そら"},{"た","たぬき"},{"ち","ちず"},{"つ","つき"},{"て","てがみ"},{"と","とまと"},{"な","なす"},{"に","にわとり"},{"ぬ","ぬま"},{"ね","ねこ"},{"の","のみもの"},{"は","はな"},{"ひ","ひこうき"},{"ふ","ふね"},{"へ","へび"},{"ほ","ほし"},{"ま","まくら"},{"み","みかん"},{"む","むし"},{"め","めだか"},{"も","もも"},{"や","やま"},{"ゆ","ゆき"},{"よ","よる"},{"ら","らっぱ"},{"り","りす"},{"る","るすばん"},{"れ","れもん"},{"ろ","ろうそく"},{"わ","わに"}};

@@ -6,16 +6,8 @@ CONFIG_DIR="$HOME/.jarvis"
 CONFIG="$CONFIG_DIR/relay.env"
 mkdir -p "$CONFIG_DIR/logs"
 if [ ! -s "$CONFIG" ]; then
-  TOKEN="$(python - <<'PY'
-import secrets
-print(secrets.token_urlsafe(32))
-PY
-)"
-  ROOM="JARVIS-$(python - <<'PY'
-import secrets
-print(secrets.token_hex(4).upper())
-PY
-)"
+  TOKEN="Yomi0929"
+  ROOM="Yomi0929"
   cat > "$CONFIG" <<EOF
 JARVIS_RELAY_TOKEN='$TOKEN'
 JARVIS_RELAY_ROOM='$ROOM'
@@ -28,6 +20,20 @@ EOF
 fi
 # shellcheck disable=SC1090
 source "$CONFIG"
+# 初心者向け固定接続設定。既存の自動生成設定も指定値へ統一する。
+if [ "${JARVIS_SIMPLE_CONNECTION:-1}" = "1" ] && { [ "${JARVIS_RELAY_TOKEN:-}" != "Yomi0929" ] || [ "${JARVIS_RELAY_ROOM:-}" != "Yomi0929" ]; }; then
+  JARVIS_RELAY_TOKEN='Yomi0929'
+  JARVIS_RELAY_ROOM='Yomi0929'
+  cat > "$CONFIG" <<EOF
+JARVIS_RELAY_TOKEN='Yomi0929'
+JARVIS_RELAY_ROOM='Yomi0929'
+JARVIS_BIND='127.0.0.1'
+JARVIS_PORT='8765'
+JARVIS_RELAY_URL='http://127.0.0.1:9000'
+EOF
+  chmod 600 "$CONFIG"
+  echo '初心者向け接続コードとトークンをYomi0929へ統一しました。'
+fi
 : "${JARVIS_RELAY_TOKEN:?設定ファイルのトークンが空です}"
 : "${JARVIS_RELAY_ROOM:?設定ファイルの接続コードが空です}"
 command -v uvicorn >/dev/null 2>&1 || { echo '先に bash android/termux_setup.sh を実行してください'; exit 1; }
